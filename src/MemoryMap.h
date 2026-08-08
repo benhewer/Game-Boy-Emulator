@@ -14,6 +14,7 @@ private:
 public:
     MemoryMap();
 
+    uint8_t& get(address_t address);
     uint8_t const read(address_t address);
     void write(address_t address, uint8_t data);
 };

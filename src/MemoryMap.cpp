@@ -5,10 +5,14 @@ MemoryMap::MemoryMap()
 {
 }
 
-uint8_t const MemoryMap::read(address_t address) {
+uint8_t& MemoryMap::get(address_t address) {
     if (address >= WRAM_LOWER && address <= WRAM_UPPER) {
         return wram[address - WRAM_LOWER];
     }
+}
+
+uint8_t const MemoryMap::read(address_t address) {
+    return get(address);
 }
 
 void MemoryMap::write(address_t address, uint8_t data) {
