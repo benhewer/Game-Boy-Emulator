@@ -13,7 +13,11 @@ void halt(CPU& cpu) {
     // TODO HALT
 }
 
-instruction_t ldRegReg(Register8 dst, Register8 src) {
+void nop(CPU& cpu) {
+    // Do nothing
+}
+
+instruction_t ldRegReg(R8 dst, R8 src) {
     return [dst, src](CPU& cpu) {
         cpu.writeReg(dst, cpu.readReg(src));
     };
@@ -25,7 +29,7 @@ void ldRegRegs(instruction_table_t& instructions) {
     uint8_t opcode = 0x40;
     for (auto dst : register8s) {
         for (auto src : register8s) {
-            if (dst == HL && src == HL) {
+            if (dst == R8::HL && src == R8::HL) {
                 instructions[opcode] = halt;
             } else {
                 instructions[opcode] = ldRegReg(dst, src);
@@ -35,7 +39,7 @@ void ldRegRegs(instruction_table_t& instructions) {
     }
 }
 
-instruction_t ldRegImm8(Register8 dst) {
+instruction_t ldRegImm8(R8 dst) {
     return [dst](CPU& cpu) {
         uint8_t data = cpu.fetch();
         cpu.writeReg(dst, data);
@@ -53,7 +57,7 @@ void ldRegImm8s(instruction_table_t& instructions) {
     }
 }
 
-instruction_t ldRegImm16(Register16 dst) {
+instruction_t ldRegImm16(R16 dst) {
     return [dst](CPU& cpu) {
         uint8_t lsb = cpu.fetch();
         uint8_t msb = cpu.fetch();
@@ -73,19 +77,19 @@ void ldRegImm16s(instruction_table_t& instructions) {
     }
 }
 
-instruction_t ldIndReg(Register16 dst, Register8 src) {
+instruction_t ldIndReg(R16 dst, R8 src) {
     return [dst, src](CPU& cpu) {
         cpu.writeMemory(dst, cpu.readReg(src));
     };
 }
 
-instruction_t incReg16(Register16 reg) {
+instruction_t incReg16(R16 reg) {
     return [reg](CPU& cpu) {
         cpu.reg(reg)++;
     };
 }
 
-instruction_t decReg16(Register16 reg) {
+instruction_t decReg16(R16 reg) {
     return [reg](CPU& cpu) {
         cpu.reg(reg)--;
     };
@@ -95,25 +99,25 @@ instruction_t decReg16(Register16 reg) {
 void ldIndAs(instruction_table_t& instructions) {
     // first load a, ld [bc] a has opcode 0x02
     uint8_t opcode = 0x02;
-    instructions[opcode] = ldIndReg(BC, A);
+    instructions[opcode] = ldIndReg(R16::BC, R8::A);
     // each ld a instruction is 0x10 apart
     opcode += 0x10;
-    instructions[opcode] = ldIndReg(DE, A);
+    instructions[opcode] = ldIndReg(R16::DE, R8::A);
     opcode += 0x10;
     // ld [hl+] a, hl is incremented
     instructions[opcode] = sequence(
-        ldIndReg(HL, A),
-        incReg16(HL)
+        ldIndReg(R16::HL, R8::A),
+        incReg16(R16::HL)
     );
     opcode += 0x10;
     // ld [hl-] a, hl is decremented
     instructions[opcode] = sequence(
-        ldIndReg(HL, A),
-        decReg16(HL)
+        ldIndReg(R16::HL, R8::A),
+        decReg16(R16::HL)
     );
 }
 
-instruction_t ldRegInd(Register8 dst, Register16 src) {
+instruction_t ldRegInd(R8 dst, R16 src) {
     return [dst, src](CPU& cpu) {
         cpu.writeReg(dst, cpu.readMemory(src));
     };
@@ -123,25 +127,25 @@ instruction_t ldRegInd(Register8 dst, Register16 src) {
 void ldAInds(instruction_table_t& instructions) {
     // first load ind, ld a [bc] has opcode 0x0A
     uint8_t opcode = 0x0A;
-    instructions[opcode] = ldRegInd(A, BC);
+    instructions[opcode] = ldRegInd(R8::A, R16::BC);
     // each ld ind instruction is 0x10 apart
     opcode += 0x10;
-    instructions[opcode] = ldRegInd(A, DE);
+    instructions[opcode] = ldRegInd(R8::A, R16::DE);
     opcode += 0x10;
     // ld a [hl+], hl is incremented
     instructions[opcode] = sequence(
-        ldRegInd(A, HL),
-        incReg16(HL)
+        ldRegInd(R8::A, R16::HL),
+        incReg16(R16::HL)
     );
     opcode += 0x10;
     // ld a [hl-], hl is decremented
     instructions[opcode] = sequence(
-        ldRegInd(A, HL),
-        decReg16(HL)
+        ldRegInd(R8::A, R16::HL),
+        decReg16(R16::HL)
     );
 }
 
-instruction_t ldRegDir16(Register8 dst) {
+instruction_t ldRegDir16(R8 dst) {
     return [dst](CPU& cpu) {
         uint8_t lsb = cpu.fetch();
         uint8_t msb = cpu.fetch();
@@ -150,7 +154,7 @@ instruction_t ldRegDir16(Register8 dst) {
     };
 }
 
-instruction_t ldDir16Reg(Register8 src) {
+instruction_t ldDir16Reg(R8 src) {
     return [src](CPU& cpu) {
         uint8_t lsb = cpu.fetch();
         uint8_t msb = cpu.fetch();
@@ -159,21 +163,21 @@ instruction_t ldDir16Reg(Register8 src) {
     };
 }
 
-instruction_t ldhRegInd(Register8 dst, Register8 src) {
+instruction_t ldhRegInd(R8 dst, R8 src) {
     return [dst, src](CPU& cpu) {
         address_t address = mergeBytes(0xFF, cpu.readReg(src));
         cpu.writeReg(dst, address);
     };
 }
 
-instruction_t ldhIndReg(Register8 dst, Register8 src) {
+instruction_t ldhIndReg(R8 dst, R8 src) {
     return [dst, src](CPU& cpu) {
         address_t address = mergeBytes(0xFF, cpu.readReg(dst));
         cpu.writeMemory(address, cpu.readReg(src));
     };
 }
 
-instruction_t ldhRegDir8(Register8 dst) {
+instruction_t ldhRegDir8(R8 dst) {
     return [dst](CPU& cpu) {
         uint8_t data = cpu.fetch();
         address_t address = mergeBytes(0xFF, data);
@@ -181,7 +185,7 @@ instruction_t ldhRegDir8(Register8 dst) {
     };
 }
 
-instruction_t ldhDir8Reg(Register8 src) {
+instruction_t ldhDir8Reg(R8 src) {
     return [src](CPU& cpu) {
         uint8_t data = cpu.fetch();
         address_t address = mergeBytes(0xFF, data);
@@ -202,38 +206,38 @@ void ld8Instrs(instruction_table_t& instructions) {
     // 2 rows at the bottom
 
     // ld [a16] a
-    instructions[0xEA] = ldDir16Reg(A);
+    instructions[0xEA] = ldDir16Reg(R8::A);
     // ld a [a16]
-    instructions[0xFA] = ldRegDir16(A);
+    instructions[0xFA] = ldRegDir16(R8::A);
 
     // ldh [c] a
-    instructions[0xE2] = ldhIndReg(C, A);
+    instructions[0xE2] = ldhIndReg(R8::C, R8::A);
     // ldh a [c]
-    instructions[0xF2] = ldhRegInd(A, C);
+    instructions[0xF2] = ldhRegInd(R8::A, R8::C);
 
     // ldh [a8] a
-    instructions[0xE0] = ldhDir8Reg(A);
+    instructions[0xE0] = ldhDir8Reg(R8::A);
     // ldh a [a8]
-    instructions[0xF0] = ldhRegDir8(A);
+    instructions[0xF0] = ldhRegDir8(R8::A);
 }
 
-instruction_t ldDir16Reg(Register16 src) {
+instruction_t ldDir16Reg(R16 src) {
     return [src](CPU& cpu) {
         uint8_t _lsb = cpu.fetch();
         uint8_t _msb = cpu.fetch();
         address_t address = mergeBytes(_msb, _lsb);
-        cpu.writeMemory(address, lsb(src));
-        cpu.writeMemory(address + 1, msb(src));
+        cpu.writeMemory(address, cpu.lsbReg(src));
+        cpu.writeMemory(address + 1, cpu.msbReg(src));
     };
 }
 
-instruction_t ldRegReg(Register16 dst, Register16 src) {
+instruction_t ldRegReg(R16 dst, R16 src) {
     return [dst, src](CPU& cpu) {
         cpu.writeReg(dst, cpu.readReg(src));
     };
 }
 
-instruction_t pushReg(Register16 src) {
+instruction_t pushReg(R16 src) {
     return [src](CPU& cpu) {
         cpu.writeMemory(--cpu.sp, cpu.msbReg(src));
         cpu.writeMemory(--cpu.sp, cpu.lsbReg(src));
@@ -250,7 +254,7 @@ void pushRegs(instruction_table_t& instructions) {
     }
 }
 
-instruction_t popReg(Register16 dst) {
+instruction_t popReg(R16 dst) {
     return [dst](CPU& cpu) {
         uint8_t lsb = cpu.readMemory(cpu.sp++);
         uint8_t msb = cpu.readMemory(cpu.sp++);
@@ -270,7 +274,7 @@ void popRegs(instruction_table_t& instructions) {
 }
 
 // Load dst from adjusted src
-instruction_t ldRegRegE8(Register16 dst, Register16 src) {
+instruction_t ldRegRegE8(R16 dst, R16 src) {
     return [dst, src](CPU& cpu) {
         uint8_t offset = cpu.fetch();
         uint8_t srcLow = cpu.readReg(src) & 0xFF;
@@ -290,10 +294,10 @@ void ld16Instrs(instruction_table_t& instructions) {
     ldRegImm16s(instructions);
 
     // ld [a16] sp
-    instructions[0x08] = ldDir16Reg(SP);
+    instructions[0x08] = ldDir16Reg(R16::SP);
 
     // ld sp hl
-    instructions[0xF9] = ldRegReg(SP, HL);
+    instructions[0xF9] = ldRegReg(R16::SP, R16::HL);
 
     // bottom 4 rows in x5 column
     pushRegs(instructions);
@@ -302,10 +306,12 @@ void ld16Instrs(instruction_table_t& instructions) {
     popRegs(instructions);
 
     // ld hl sp+e8
-    instructions[0xF8] = ldRegRegE8(HL, SP);
+    instructions[0xF8] = ldRegRegE8(R16::HL, R16::SP);
 }
 
 void allInstructions(instruction_table_t& instructions) {
+    instructions[0x00] = nop;
+    
     ld8Instrs(instructions);
     ld16Instrs(instructions);
 }

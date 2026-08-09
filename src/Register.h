@@ -1,14 +1,16 @@
+#pragma once
+
 #include <iostream>
 #include <array>
 
-enum Flag {
+enum class Flag {
     Z,
     N,
     H,
     C
 };
 
-enum Register8 {
+enum class R8 {
     B,
     C,
     D,
@@ -20,17 +22,17 @@ enum Register8 {
 };
 
 constexpr std::array register8s {
-    Register8::B,
-    Register8::C,
-    Register8::D,
-    Register8::E,
-    Register8::H,
-    Register8::L,
-    Register8::HL,
-    Register8::A
+    R8::B,
+    R8::C,
+    R8::D,
+    R8::E,
+    R8::H,
+    R8::L,
+    R8::HL,
+    R8::A
 };
 
-enum Register16 {
+enum class R16 {
     BC,
     DE,
     HL,
@@ -39,15 +41,15 @@ enum Register16 {
 };
 
 constexpr std::array register16s {
-    Register16::BC,
-    Register16::DE,
-    Register16::HL,
-    Register16::SP
+    R16::BC,
+    R16::DE,
+    R16::HL,
+    R16::SP
 };
 
 constexpr std::array register16s_stack {
-    Register16::BC,
-    Register16::DE,
-    Register16::HL,
-    Register16::AF
+    R16::BC,
+    R16::DE,
+    R16::HL,
+    R16::AF
 };

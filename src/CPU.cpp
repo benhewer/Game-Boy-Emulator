@@ -22,35 +22,41 @@ CPU::CPU(MemoryMap& memory)
       h{hl_storage.high()},
       l{hl_storage.low()},
 
-      cycles{},
+      ticks{},
 
       instructions{}
 {
+    addInstructions();
 }
 
 void CPU::addInstructions() {
     allInstructions(instructions);
 }
 
-uint8_t& CPU::reg(Register8 r) {
+uint8_t& CPU::reg(R8 r) {
     switch (r) {
-        case Register8::A: return a;
-        case Register8::B: return b;
-        case Register8::C: return c;
-        case Register8::D: return d;
-        case Register8::E: return e;
-        case Register8::H: return h;
-        case Register8::HL: return memory(hl);
-        case Register8::L: return l;
+        case R8::A: return a;
+        case R8::B: return b;
+        case R8::C: return c;
+        case R8::D: return d;
+        case R8::E: return e;
+        case R8::H: return h;
+        case R8::HL: return memory(hl);
+        case R8::L: return l;
     }
+
+    throw std::out_of_range("Register8 doesn't exist");
 }
 
 uint8_t& CPU::memory(address_t address) {
-    cycles++;
+    // TODO: eventually, could call some cycle function here
+    //       to make other things happen to simulate waiting
+
+    ticks += TICKS_PER_MEM_ACCESS;
     return mem.get(address);
 }
 
-uint8_t& CPU::memory(Register16 r) {
+uint8_t& CPU::memory(R16 r) {
     return memory(readReg(r));
 }
 
@@ -58,7 +64,7 @@ uint8_t CPU::readMemory(address_t address) {
     return memory(address);
 }
 
-uint8_t CPU::readMemory(Register16 r) {
+uint8_t CPU::readMemory(R16 r) {
     return readMemory(readReg(r));
 }
 
@@ -66,46 +72,48 @@ void CPU::writeMemory(address_t address, uint8_t data) {
     memory(address) = data;
 }
 
-void CPU::writeMemory(Register16 r, uint8_t data) {
+void CPU::writeMemory(R16 r, uint8_t data) {
     writeMemory(readReg(r), data);
 }
 
-uint8_t CPU::readReg(Register8 r) {
+uint8_t CPU::readReg(R8 r) {
     switch (r) {
-        case HL: return readMemory(hl);
+        case R8::HL: return readMemory(hl);
         default: return readReg(r);
     }
 }
 
-void CPU::writeReg(Register8 r, uint8_t data) {
+void CPU::writeReg(R8 r, uint8_t data) {
     switch (r) {
-        case HL: writeMemory(hl, data);
+        case R8::HL: writeMemory(hl, data);
         default: reg(r) = data;
     }
 }
 
-uint16_t& CPU::reg(Register16 r) {
+uint16_t& CPU::reg(R16 r) {
     switch (r) {
-        case Register16::AF: return af;
-        case Register16::BC: return bc;
-        case Register16::DE: return de;
-        case Register16::HL: return hl;
-        case Register16::SP: return sp;
+        case R16::AF: return af;
+        case R16::BC: return bc;
+        case R16::DE: return de;
+        case R16::HL: return hl;
+        case R16::SP: return sp;
     }
+
+    throw std::out_of_range("Register16 doesn't exist");
 }
 
-uint16_t CPU::readReg(Register16 r) {
+uint16_t CPU::readReg(R16 r) {
     return reg(r);
 }
 
-void CPU::writeReg(Register16 r, uint16_t data) {
+void CPU::writeReg(R16 r, uint16_t data) {
     reg(r) = data;
 }
 
-uint8_t CPU::msbReg(Register16 r) {
+uint8_t CPU::msbReg(R16 r) {
     return msb(readReg(r));
 }
-uint8_t CPU::lsbReg(Register16 r) {
+uint8_t CPU::lsbReg(R16 r) {
     return lsb(readReg(r));
 }
 
@@ -145,4 +153,25 @@ void CPU::setFlags(
 uint8_t CPU::fetch() {
     uint8_t data = readMemory(pc++);
     return data;
+}
+
+// TODO fetch execute overlap
+//      (for when my cycles model is more accurate)
+void CPU::tick() {
+    ticks++;
+    if (ticks < TICKS_PER_MCYCLE) {
+        return;
+    }
+    ticks = 0;
+
+    uint8_t opcode = fetch();
+    instruction_t instruction = instructions[opcode];
+
+    if (!instruction) {
+        std::cerr << "Unimplemented opcode: "
+                  << std::hex << static_cast<int>(opcode)
+                  << std::endl;
+    }
+
+    instruction(*this);
 }

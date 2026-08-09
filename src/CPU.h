@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 
 #include "types.h"
@@ -7,6 +9,9 @@
 
 class CPU {
 private:
+    static constexpr size_t TICKS_PER_MEM_ACCESS = 4;
+    static constexpr size_t TICKS_PER_MCYCLE = 4;
+
     RegisterPair af_storage;
     RegisterPair bc_storage;
     RegisterPair de_storage;
@@ -14,14 +19,14 @@ private:
 
     MemoryMap mem;
 
-    size_t cycles;
+    size_t ticks;
 
     instruction_table_t instructions;
 
     void addInstructions();
 
     uint8_t& memory(address_t address);
-    uint8_t& memory(Register16 r);
+    uint8_t& memory(R16 r);
     
 public:
     address_t sp;
@@ -41,25 +46,25 @@ public:
     uint8_t& h;
     uint8_t& l;
 
-    CPU(MemoryMap& memory);
+    explicit CPU(MemoryMap& memory);
 
     uint8_t readMemory(address_t address);
-    uint8_t readMemory(Register16 r);
+    uint8_t readMemory(R16 r);
 
     void writeMemory(address_t address, uint8_t data);
-    void writeMemory(Register16 r, uint8_t data);
+    void writeMemory(R16 r, uint8_t data);
 
-    uint8_t& reg(Register8 r);
-    uint16_t& reg(Register16 r);
+    uint8_t& reg(R8 r);
+    uint16_t& reg(R16 r);
 
-    uint8_t readReg(Register8 r);
-    uint16_t readReg(Register16 r);
+    uint8_t readReg(R8 r);
+    uint16_t readReg(R16 r);
     
-    void writeReg(Register8 r, uint8_t data);
-    void writeReg(Register16 r, uint16_t data);
+    void writeReg(R8 r, uint8_t data);
+    void writeReg(R16 r, uint16_t data);
 
-    uint8_t msbReg(Register16 r);
-    uint8_t lsbReg(Register16 r);
+    uint8_t msbReg(R16 r);
+    uint8_t lsbReg(R16 r);
 
     void setFlag(Flag flag, uint8_t value);
     void setFlags(
@@ -71,4 +76,6 @@ public:
 
     // returns wram[pc] and increments pc
     uint8_t fetch();
+
+    void tick();
 };
