@@ -309,9 +309,308 @@ void ld16Instrs(instruction_table_t& instructions) {
     instructions[0xF8] = ldRegRegE8(R16::HL, R16::SP);
 }
 
+using reg_reg_op8_t = uint8_t (*)(CPU&, uint8_t, uint8_t);
+using reg_op8_t = uint8_t (*)(CPU&, uint8_t);
+
+instruction_t op8RegReg(reg_reg_op8_t op, R8 dst, R8 src) {
+    return [op, dst, src](CPU& cpu) {
+        cpu.writeReg(
+            dst,
+            op(cpu, cpu.readReg(dst), cpu.readReg(src))
+        );
+    };
+}
+
+instruction_t op8Reg(reg_op8_t op, R8 reg) {
+    return [op, reg](CPU& cpu) {
+        cpu.writeReg(
+            reg,
+            op(cpu, cpu.readReg(reg))
+        );
+    };
+}
+
+instruction_t op8RegImm(reg_reg_op8_t op, R8 dst) {
+    return [op, dst](CPU& cpu) {
+        cpu.writeReg(
+            dst,
+            op(cpu, cpu.readReg(dst), cpu.fetch())
+        );
+    };
+}
+
+uint8_t add8(CPU& cpu, uint8_t a, uint8_t b) {
+    uint16_t result = static_cast<uint16_t>(a) + b;
+
+    cpu.setFlag(Flag::Z, static_cast<uint8_t>(result) == 0);
+    cpu.setFlag(Flag::N, false);
+    cpu.setFlag(Flag::H, (a & 0x0F) + (b & 0x0F) > 0x0F);
+    cpu.setFlag(Flag::C, result > 0xFF);
+
+    return static_cast<uint8_t>(result);
+}
+
+void addRegs(instruction_table_t& instructions) {
+    // first add, add a b has opcode 0x80
+    uint8_t opcode = 0x80;
+    for (auto reg : register8s) {
+        instructions[opcode++] = op8RegReg(add8, R8::A, reg);
+    }
+}
+
+uint8_t adc8(CPU& cpu, uint8_t a, uint8_t b) {
+    uint8_t carry = cpu.readFlag(Flag::C);
+
+    uint16_t result = static_cast<uint16_t>(a) + b + carry;
+
+    cpu.setFlag(Flag::Z, static_cast<uint8_t>(result) == 0);
+    cpu.setFlag(Flag::N, false);
+    cpu.setFlag(Flag::H, (a & 0x0F) + (b & 0x0F) + carry > 0x0F);
+    cpu.setFlag(Flag::C, result > 0xFF);
+
+    return static_cast<uint8_t>(result);
+}
+
+void adcRegs(instruction_table_t instructions) {
+    // first adc, adc a b has opcode 0x88
+    uint8_t opcode = 0x88;
+    for (auto reg : register8s) {
+        instructions[opcode++] = op8RegReg(adc8, R8::A, reg);
+    }
+}
+
+uint8_t sub8(CPU& cpu, uint8_t a, uint8_t b)
+{
+    uint8_t result = a - b;
+
+    cpu.setFlag(Flag::Z, result == 0);
+    cpu.setFlag(Flag::N, true);
+    cpu.setFlag(Flag::H, (a & 0x0F) < (b & 0x0F));
+    cpu.setFlag(Flag::C, a < b);
+
+    return result;
+}
+
+void subRegs(instruction_table_t& instructions) {
+    // first sub, sub a b has opcode 0x90
+    uint8_t opcode = 0x90;
+    for (auto reg : register8s) {
+        instructions[opcode++] = op8RegReg(sub8, R8::A, reg);
+    }
+}
+
+uint8_t sbc8(CPU& cpu, uint8_t a, uint8_t b) {
+    uint8_t carry = cpu.readFlag(Flag::C);
+
+    uint8_t result = a - b - carry;
+
+    cpu.setFlag(Flag::Z, result == 0);
+    cpu.setFlag(Flag::N, true);
+    cpu.setFlag(Flag::H, (a & 0x0F) < (b & 0x0F) + carry);
+    cpu.setFlag(Flag::C, a < b + carry);
+
+    return static_cast<uint8_t>(result);
+}
+
+void sbcRegs(instruction_table_t& instructions) {
+    // first sbc, sbc a b has opcode 0x98
+    uint8_t opcode = 0x98;
+    for (auto reg : register8s) {
+        instructions[opcode++] = op8RegReg(sbc8, R8::A, reg);
+    }
+}
+
+uint8_t and8(CPU& cpu, uint8_t a, uint8_t b) {
+    uint8_t result = a & b;
+
+    cpu.setFlag(Flag::Z, result == 0);
+    cpu.setFlag(Flag::N, false);
+    cpu.setFlag(Flag::H, true);
+    cpu.setFlag(Flag::C, false);
+
+    return result;
+}
+
+void andRegs(instruction_table_t instructions) {
+    // first and opcode
+    uint8_t opcode = 0xA0;
+    for (auto reg : register8s) {
+        instructions[opcode++] = op8RegReg(and8, R8::A, reg);
+    }
+}
+
+uint8_t xor8(CPU& cpu, uint8_t a, uint8_t b) {
+    uint8_t result = a ^ b;
+
+    cpu.setFlag(Flag::Z, result == 0);
+    cpu.setFlag(Flag::N, false);
+    cpu.setFlag(Flag::H, false);
+    cpu.setFlag(Flag::C, false);
+
+    return result;
+}
+
+void xorRegs(instruction_table_t instructions) {
+    // first xor opcode
+    uint8_t opcode = 0xA8;
+    for (auto reg : register8s) {
+        instructions[opcode++] = op8RegReg(xor8, R8::A, reg);
+    }
+}
+
+uint8_t or8(CPU& cpu, uint8_t a, uint8_t b) {
+    uint8_t result = a | b;
+
+    cpu.setFlag(Flag::Z, result == 0);
+    cpu.setFlag(Flag::N, false);
+    cpu.setFlag(Flag::H, false);
+    cpu.setFlag(Flag::C, false);
+
+    return result;
+}
+
+void orRegs(instruction_table_t instructions) {
+    // first or opcode
+    uint8_t opcode = 0xB0;
+    for (auto reg : register8s) {
+        instructions[opcode++] = op8RegReg(or8, R8::A, reg);
+    }
+}
+
+instruction_t cpRegReg(R8 dst, R8 src) {
+    return [dst, src](CPU& cpu) {
+        // just update the flags
+        sub8(cpu, cpu.readReg(dst), cpu.readReg(src));
+    };
+}
+
+instruction_t cpRegImm(R8 reg) {
+    return [reg](CPU& cpu) {
+        // just update the flags
+        sub8(cpu, cpu.readReg(reg), cpu.fetch());
+    };
+}
+
+void cpRegs(instruction_table_t& instructions) {
+    // frst cp, cp a b has opcode 0xB8
+    uint8_t opcode = 0xB8;
+    for (auto reg : register8s) {
+        instructions[opcode++] = cpRegReg(R8::A, reg);
+    }
+}
+
+uint8_t inc8(CPU& cpu, uint8_t a) {
+    uint8_t result = a + 1;
+
+    cpu.setFlag(Flag::Z, result == 0);
+    cpu.setFlag(Flag::N, false);
+    cpu.setFlag(Flag::H, (a & 0x0F) + 1 > 0x0F);
+
+    return result;
+}
+
+void incRegs(instruction_table_t instructions) {
+    // first inc, inc b has opcode 0x04
+    uint8_t opcode = 0x04;
+    for (auto reg : register8s) {
+        instructions[opcode] = op8Reg(inc8, reg);
+        opcode += 8;
+    }
+}
+
+uint8_t dec8(CPU& cpu, uint8_t a) {
+    uint8_t result = a - 1;
+
+    cpu.setFlag(Flag::Z, result == 0);
+    cpu.setFlag(Flag::N, true);
+    cpu.setFlag(Flag::H, (a & 0x0F) < 1);
+
+    return result;
+}
+
+void incRegs(instruction_table_t instructions) {
+    // first dec, dec b has opcode 0x05
+    uint8_t opcode = 0x05;
+    for (auto reg : register8s) {
+        instructions[opcode] = op8Reg(dec8, reg);
+        opcode += 8;
+    }
+}
+
+instruction_t ccf() {
+    return [](CPU& cpu) {
+        cpu.setFlag(Flag::N, false);
+        cpu.setFlag(Flag::H, false);
+        cpu.setFlag(Flag::C, ~cpu.readFlag(Flag::C));
+    };
+}
+
+instruction_t scf() {
+    return [](CPU& cpu) {
+        cpu.setFlag(Flag::N, false);
+        cpu.setFlag(Flag::H, false);
+        cpu.setFlag(Flag::C, true);
+    };
+}
+
+instruction_t daa() {
+    // TODO helpppp
+    std::runtime_error("Oh i havent done daa yet");
+}
+
+instruction_t cpl() {
+    return [](CPU& cpu) {
+        cpu.a = ~cpu.a;
+        cpu.setFlag(Flag::N, true);
+        cpu.setFlag(Flag::H, true);
+    };
+}
+
+// 8-bit arithmetic / logical instructions
+void arithmeticLogical8s(instruction_table_t& instructions) {
+    addRegs(instructions);
+    // add a n8
+    instructions[0xC6] = op8RegImm(add8, R8::A);
+
+    adcRegs(instructions);
+    // adc a n8
+    instructions[0xCE] = op8RegImm(adc8, R8::A);
+
+    subRegs(instructions);
+    // sub a n8
+    instructions[0xD6] = op8RegImm(sub8, R8::A);
+
+    sbcRegs(instructions);
+    // sbc a n8
+    instructions[0xDE] = op8RegImm(sbc8, R8::A);
+
+    andRegs(instructions);
+    // and a n8
+    instructions[0xE6] = op8RegImm(and8, R8::A);
+
+    xorRegs(instructions);
+    // xor a n8
+    instructions[0xEE] = op8RegImm(xor8, R8::A);
+
+    orRegs(instructions);
+    // or a n8
+    instructions[0xF6] = op8RegImm(or8, R8::A);
+
+    cpRegs(instructions);
+    // cp a n8
+    instructions[0xFE] = cpRegImm(R8::A);
+
+    instructions[0x3F] = ccf();
+    instructions[0x37] = scf();
+    instructions[0x27] = daa();
+    instructions[0x2F] = cpl();
+}
+
 void allInstructions(instruction_table_t& instructions) {
     instructions[0x00] = nop;
-    
+
     ld8Instrs(instructions);
     ld16Instrs(instructions);
+
+    arithmeticLogical8s(instructions);
 }

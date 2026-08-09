@@ -117,37 +117,41 @@ uint8_t CPU::lsbReg(R16 r) {
     return lsb(readReg(r));
 }
 
-void CPU::setFlag(Flag flag, uint8_t value) {
+void CPU::setFlag(Flag flag, bool set) {
     switch (flag) {
         case Flag::Z: {
-            setBit(f, value & 0x01, 7);
+            setBit(f, set, 7);
             break;
         }
         case Flag::N: {
-            setBit(f, value & 0x01, 7);
+            setBit(f, set, 6);
             break;
         }
         case Flag::H: {
-            setBit(f, value & 0x01, 7);
+            setBit(f, set, 5);
             break;
         }
         case Flag::C: {
-            setBit(f, value & 0x01, 4);
+            setBit(f, set, 4);
             break;
         }
     }
 }
 
-void CPU::setFlags(
-    uint8_t z,
-    uint8_t n,
-    uint8_t h,
-    uint8_t c
-) {
+void CPU::setFlags(bool z, bool n, bool h, bool c) {
     setFlag(Flag::Z, z);
     setFlag(Flag::N, n);
     setFlag(Flag::H, h);
     setFlag(Flag::C, c);
+}
+
+uint8_t CPU::readFlag(Flag flag) {
+    switch (flag) {
+        case Flag::Z: return readBit(f, 7);
+        case Flag::N: return readBit(f, 6);
+        case Flag::H: return readBit(f, 5);
+        case Flag::C: return readBit(f, 4);
+    }
 }
 
 uint8_t CPU::fetch() {

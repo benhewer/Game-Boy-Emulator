@@ -66,13 +66,10 @@ public:
     uint8_t msbReg(R16 r);
     uint8_t lsbReg(R16 r);
 
-    void setFlag(Flag flag, uint8_t value);
-    void setFlags(
-        uint8_t z,
-        uint8_t n,
-        uint8_t h,
-        uint8_t c
-    );
+    void setFlag(Flag flag, bool set);
+    void setFlags(bool z, bool n, bool h, bool c);
+
+    uint8_t readFlag(Flag flag);
 
     // returns wram[pc] and increments pc
     uint8_t fetch();
