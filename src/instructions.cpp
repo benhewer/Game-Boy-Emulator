@@ -553,9 +553,33 @@ instruction_t scf() {
     };
 }
 
+// Called after an arithmetic instruction whose inputs were in BCD
+// e.g. 0x42 to represent 42. Adjusts the result to also be in BCD
 instruction_t daa() {
-    // TODO helpppp
-    std::runtime_error("Oh i havent done daa yet");
+    return [](CPU& cpu) {
+        uint8_t adjustment = 0;
+
+        // if a subtraction previously occured
+        if (cpu.readFlag(Flag::N)) {
+            if (cpu.readFlag(Flag::H)) {
+                adjustment += 0x06;
+            }
+            if (cpu.readFlag(Flag::C)) {
+                adjustment += 0x60;
+            }
+            cpu.a -= adjustment;
+
+        // if an addition previously occured
+        } else {
+            if (cpu.readFlag(Flag::H) || cpu.a & 0x0F > 0x09) {
+                adjustment += 0x06;
+            }
+            if (cpu.readFlag(Flag::C) || cpu.a > 0x99) {
+                adjustment += 0x60;
+            }
+            cpu.a += adjustment;
+        }
+    };
 }
 
 instruction_t cpl() {
